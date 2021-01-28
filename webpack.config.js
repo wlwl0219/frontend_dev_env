@@ -8,7 +8,7 @@ const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 module.exports = {
   mode: "development",
   entry: {
-    main: "./src/app.js",
+    main: "./app.js",
   },
   output: {
     filename: "[name].js",
@@ -33,6 +33,11 @@ module.exports = {
           name: "[name].[ext]?[hash]", // 파일명 형식
           // limit: 5000, // 5kb 미만 파일만 data url로 처리
         },
+      },
+      {
+        test: /\.js$/,
+        exclude: /node_modules/,
+        loader: "babel-loader", // 바벨 로더를 추가한다
       },
     ],
   },
