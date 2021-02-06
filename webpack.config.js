@@ -4,11 +4,17 @@ const banner = require("./banner.js");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
 const { CleanWebpackPlugin } = require("clean-webpack-plugin");
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+const apiMocker = require("connect-api-mocker")
+const mode = process.env.NODE_ENV || "development"
+const OptimizeCSSAssetsPlugin = require("optimize-css-assets-webpack-plugin")
+const TerserPlugin = require("terser-webpack-plugin")
+const CopyPlugin = require("copy-webpack-plugin")
 
 module.exports = {
-  mode: "development",
+  mode,
   entry: {
     main: "./src/app.js",
+    controller: "./src/controller.js",
   },
   output: {
     filename: "[name].js",
@@ -66,17 +72,55 @@ module.exports = {
       hash: true,
     }),
     new CleanWebpackPlugin(),
+    new CopyPlugin([
+      {
+        from: "./node_modules/axios/dist/axios.min.js",
+        to: "./axios.min.js", // 목적지 파일에 들어간다
+      },
+    ]),
     ...(process.env.NODE_ENV === "production"
       ? [new MiniCssExtractPlugin({ filename: `[name].css` })]
       : []),
+      
   ],
-  // devServer: {
-  //   contentBase: path.join(__dirname, "dist"),
-  //   publicPath: "/",
-  //   host: "dev.domain.com",
-  //   overlay: true,
-  //   port: 8080,
-  //   stats: "errors-only",
-  //   historyApiFallback: true,
-  // },
+  devServer: {
+    contentBase: path.join(__dirname, "dist"),
+    publicPath: "/",
+    host: "127.0.0.1",
+    overlay: true,
+    port: 8080,
+    stats: "errors-only",
+    before: (app, server, compiler) => {
+      app.use(apiMocker("/api", "mocks/api"))
+    },
+    // proxy: {
+    //   "/api": "http://localhost:8081", // 프록시
+    // },
+    hot: true,
+    // before: (app, server, compiler) => {
+    //   app.get("/api/keywords", (req, res) => {
+    //     res.json([
+    //       { keyword: "이탈리아" },
+    //       { keyword: "세프의요리" },
+    //       { keyword: "제철" },
+    //       { keyword: "홈파티" },
+    //     ])
+    //   })
+    // },
+  },
+  optimization: {
+    splitChunks: {
+      chunks: "all",
+    },
+    minimizer: mode === "production" ? [new OptimizeCSSAssetsPlugin(),  new TerserPlugin({
+      terserOptions: {
+        compress: {
+          drop_console: true, // 콘솔 로그를 제거한다
+        },
+      },
+    }),] : [],
+  },
+  externals: {
+    axios: "axios",
+  },
 };
